@@ -1,0 +1,160 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.app {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.header {
+  text-align: center;
+  color: white;
+  margin-bottom: 40px;
+}
+
+.header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+.header p {
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.card h2 {
+  margin-bottom: 20px;
+  color: #2d3748;
+}
+
+.reviews-container {
+  margin-bottom: 20px;
+}
+
+.review-item {
+  background: #f7fafc;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  border-left: 4px solid #667eea;
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.review-item label {
+  display: block;
+  font-weight: 600;
+  margin: 10px 0 5px 0;
+  color: #2d3748;
+}
+
+.rating-select,
+.review-text {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.review-text {
+  min-height: 100px;
+  resize: vertical;
+}
+
+button {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s;
+  margin-right: 10px;
+}
+
+button:hover {
+  background: #5568d3;
+  transform: translateY(-2px);
+}
+
+button:disabled {
+  background: #cbd5e0;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.add-btn {
+  background: #48bb78;
+}
+
+.add-btn:hover {
+  background: #38a169;
+}
+
+.remove-btn {
+  background: #f56565;
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
+.remove-btn:hover {
+  background: #e53e3e;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.summary {
+  background: #f0fff4;
+  border-left: 4px solid #48bb78;
+  padding: 20px;
+  border-radius: 8px;
+  white-space: pre-wrap;
+  line-height: 1.8;
+  font-size: 15px;
+  color: #2d3748;
+}
+
+.error {
+  background: #fff5f5;
+  border-left: 4px solid #f56565;
+  padding: 15px;
+  border-radius: 8px;
+  color: #c53030;
+}
+
+.review-count {
+  margin-top: 15px;
+  color: #718096;
+  font-size: 14px;
+}
