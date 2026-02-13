@@ -1,31 +1,79 @@
-name: Claude Code Review
+name: Claude AI PR Review
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+    branches: [main, develop]
 
 permissions:
   contents: read
   pull-requests: write
+  issues: write
 
 jobs:
   claude-review:
+    name: AI Code Review
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 10
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
-      - name: Get changed files
-        id: changed-files
-        uses: tj-actions/changed-files@v40
-      
+
+      - name: Get PR diff
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+          git diff origin/${{ github.event.pull_request.base.ref }}...HEAD > pr_diff.txt
+          git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD > changed_files.txt
+
       - name: Review with Claude
-        uses: docker://ghcr.io/anthropics/claude-code-github-action:latest
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Prepare data
+          DIFF=$(cat pr_diff.txt | head -c 50000 | base64 -w 0)
+          FILES=$(cat changed_files.txt | base64 -w 0)
+
+          # Create request
+          cat > request.json << EOF
+          {
+            "model": "claude-sonnet-4-20250514",
+            "max_tokens": 4096,
+            "messages": [{
+              "role": "user",
+              "content": "Review this PR. Title: ${{ github.event.pull_request.title }}\n\nFiles: $(echo $FILES | base64 -d)\n\nDiff: $(echo $DIFF | base64 -d)\n\nProvide brief review with:\n## 🤖 Claude AI Review\n### ✅ Good\n### ⚠️ Issues\n### 💡 Suggestions"
+            }]
+          }
+          EOF
+
+          # Call API
+          curl -s https://api.anthropic.com/v1/messages \
+            -H "content-type: application/json" \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -d @request.json | jq -r '.content[0].text' > review.md || echo "Review failed" > review.md
+
+      - name: Post review
+        uses: actions/github-script@v7
         with:
-          files: ${{ steps.changed-files.outputs.all_changed_files }} 
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const review = fs.readFileSync('review.md', 'utf8');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: review
+            });
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-review
+          path: review.md
+          retention-days: 7
