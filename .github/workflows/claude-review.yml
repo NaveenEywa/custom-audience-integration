@@ -4,12 +4,13 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   claude-review:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
     
     steps:
       - name: Checkout code
@@ -17,15 +18,14 @@ jobs:
         with:
           fetch-depth: 0
       
-      - name: Get PR diff
-        id: diff
-        run: |
-          git fetch origin ${{ github.base_ref }}
-          git diff origin/${{ github.base_ref }}...HEAD > pr_diff.txt
-          echo "Diff generated"
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v40
       
-      - name: Claude Code Review
-        uses: anthropics/anthropic-quickstarts@main
+      - name: Review with Claude
+        uses: docker://ghcr.io/anthropics/claude-code-github-action:latest
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          files: ${{ steps.changed-files.outputs.all_changed_files }} 
