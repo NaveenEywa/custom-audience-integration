@@ -1,0 +1,85 @@
+name: Security Review
+
+on:
+  pull_request:
+    paths:
+      - "**/*auth*"
+      - "**/*login*"
+      - "**/*password*"
+      - "**/*token*"
+      - "**/*api*"
+      - "**/*database*"
+      - "**/*db*"
+      - "**/*sql*"
+      - "**/*payment*"
+      - "**/*security*"
+      - "**/*crypto*"
+      - "**/*session*"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  security-review:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGED" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Get file contents
+        id: contents
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          DIFF=$(git diff origin/${{ github.base_ref }}...HEAD)
+          echo "diff<<EOF" >> $GITHUB_OUTPUT
+          echo "$DIFF" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Security Review with Claude
+        uses: actions/github-script@v7
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        with:
+          script: |
+            const diff = `${{ steps.contents.outputs.diff }}`;
+            const files = `${{ steps.changed.outputs.files }}`;
+
+            const response = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': process.env.ANTHROPIC_API_KEY,
+                'anthropic-version': '2023-06-01'
+              },
+              body: JSON.stringify({
+                model: 'claude-sonnet-4-20250514',
+                max_tokens: 4096,
+                messages: [{
+                  role: 'user',
+                  content: `SECURITY REVIEW - These files contain sensitive code paths:\n\n${files}\n\nPerform a thorough security review of these changes:\n\n${diff}\n\nCheck for:\n- SQL injection vulnerabilities\n- XSS vulnerabilities\n- Authentication/authorization bypasses\n- Insecure cryptographic practices\n- Hardcoded secrets or credentials\n- Insecure session management\n- Input validation issues\n- Path traversal vulnerabilities\n\nProvide specific security recommendations.`
+                }]
+              })
+            });
+
+            const data = await response.json();
+            const review = data.content[0].text;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '## 🔒 Security Review\n\n⚠️ **This PR modifies security-sensitive files**\n\n' + review
+            });
